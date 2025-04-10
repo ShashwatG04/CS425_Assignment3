@@ -33,92 +33,85 @@ This exercise helps in understanding how TCP headers and checksums work under th
 2. Run:
    ```bash
    make
-This will generate two executables: client and server.
+   ```
+   This will generate two executables: `client` and `server`.
 
-Running the Programs
-Start the Server:
+---
 
-bash
-Copy
-Edit
-sudo ./server
-The server will listen on 127.0.0.1:12345.
+## Running the Programs
 
-Start the Client (in another terminal):
+1. **Start the Server:**
 
-bash
-Copy
-Edit
-sudo ./client
-Note: Raw sockets require root privileges, so both server and client should be run using sudo.
+   ```bash
+   sudo ./server
+   ```
 
-Code Walkthrough
-1. Socket Setup
-A raw socket is created:
+   The server will listen on `127.0.0.1:12345`.
 
-cpp
-Copy
-Edit
-socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
-IP_HDRINCL is enabled to allow manual construction of the IP header:
+2. **Start the Client (in another terminal):**
 
-cpp
-Copy
-Edit
-setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
-2. SYN Packet – send_syn()
-A buffer is prepared and split into IP and TCP header sections.
+   ```bash
+   sudo ./client
+   ```
 
-IP header includes:
+> Note: Raw sockets require root privileges, so both server and client should be run using `sudo`.
 
-Version = 4
+---
 
-Protocol = TCP
+## Code Walkthrough
 
-Source and Destination IP = 127.0.0.1
+### 1. **Socket Setup**
 
-TCP header includes:
+- A raw socket is created:
+  ```cpp
+  socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+  ```
+- `IP_HDRINCL` is enabled to allow manual construction of the IP header:
+  ```cpp
+  setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
+  ```
 
-Source Port = 54321
+### 2. **SYN Packet – `send_syn()`**
 
-Destination Port = 12345
+- A buffer is prepared and split into IP and TCP header sections.
+- IP header includes:
+  - Version = 4
+  - Protocol = TCP
+  - Source and Destination IP = 127.0.0.1
+- TCP header includes:
+  - Source Port = 54321
+  - Destination Port = 12345
+  - Sequence Number = 200
+  - SYN flag set to 1
+- A TCP checksum is calculated using a pseudo-header.
+- Packet is sent using `sendto()`.
 
-Sequence Number = 200
+### 3. **Waiting for SYN-ACK – `receive_syn_ack_and_send_ack()`**
 
-SYN flag set to 1
+- Enters a loop using `recvfrom()` to listen for packets.
+- For each packet, checks:
+  - Source port is 12345
+  - Destination port is 54321
+  - SYN and ACK flags are set
+  - Sequence = 400, Ack = 201
 
-A TCP checksum is calculated using a pseudo-header.
+### 4. **Final ACK**
 
-Packet is sent using sendto().
+- On receiving a valid SYN-ACK, constructs a final ACK packet:
+  - Sequence Number = 600
+  - Acknowledgment Number = 401
+  - Only the ACK flag is set
+- Calculates checksum and sends the ACK using `sendto()`
+- Handshake is now complete.
 
-3. Waiting for SYN-ACK – receive_syn_ack_and_send_ack()
-Enters a loop using recvfrom() to listen for packets.
+### 5. **Cleanup**
 
-For each packet, checks:
+- After sending the final ACK, socket is closed and program exits.
 
-Source port is 12345
+---
 
-Destination port is 54321
+## Contributors
 
-SYN and ACK flags are set
+- Shashwat Gautam (221005)
 
-Sequence = 400, Ack = 201
-
-4. Final ACK
-On receiving a valid SYN-ACK, constructs a final ACK packet:
-
-Sequence Number = 600
-
-Acknowledgment Number = 401
-
-Only the ACK flag is set
-
-Calculates checksum and sends the ACK using sendto()
-
-Handshake is now complete.
-
-5. Cleanup
-After sending the final ACK, socket is closed and program exits.
-
-Contributors
-Shashwat Gautam (221005)
+---
